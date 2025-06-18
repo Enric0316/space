@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的線上作品集</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 30px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        header h1 {
+            color: #0056b3;
+            margin-bottom: 10px;
+        }
+        header p {
+            font-size: 1.1em;
+            color: #666;
+        }
+        nav {
+            margin-top: 25px;
+            margin-bottom: 25px;
+        }
+        nav ul {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px; /* 增加連結間距 */
+        }
+        nav ul li a {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        nav ul li a:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px); /* 輕微上移效果 */
+        }
+        .project-section {
+            margin-top: 40px;
+            border-top: 1px solid #eee;
+            padding-top: 30px;
+        }
+        .project-item {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            text-align: left;
+        }
+        .project-item h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        .project-item p {
+            color: #555;
+        }
+        .project-item a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .project-item a:hover {
+            text-decoration: underline;
+        }
+        footer {
+            margin-top: 40px;
+            padding: 20px;
+            border-top: 1px solid #eee;
+            color: #777;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>歡迎來到我的線上作品集！</h1>
+            <p>在這裡，你將探索我的一些專案和技能。</p>
+        </header>
+
+        <nav>
+            <ul>
+                <li><a href="#projects">我的專案</a></li>
+                <li><a href="https://github.com/你的GitHub帳號" target="_blank">GitHub 個人頁面</a></li>
+                </ul>
+        </nav>
+
+        <section id="projects" class="project-section">
+            <h2>我的專案</h2>
+
+            <div class="project-item">
+                <h3>圖片 XY 座標標註工具</h3>
+                <p>一個方便的網頁工具，允許用戶上傳圖片並在圖片上標註多個點的 XY 座標，並將數據導出為 CSV 檔案。非常適合需要進行精確圖片標註的工作。</p>
+                <p><a href="image-coordinate-tool.html" target="_blank">前往工具 (請確保檔案名正確)</a></p>
+                </div>
+
+            </section>
+
+        <footer>
+            <p>&copy; 2025 [你的名字/你的公司名稱]. All rights reserved.</p>
+        </footer>
+    </div>
+</body>
+</html>
