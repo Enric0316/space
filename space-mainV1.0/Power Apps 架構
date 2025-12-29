@@ -229,6 +229,15 @@ Y: ((Round(ThisItem.PointY * 50 + 0.5, 0) - 0.5) / 50 * img_Map_Base.Height) - S
 
 
 
+
+
+
+
+
+
+
+
+00000
 以下是這組前台  GEMS_現場查驗APP1141229
 這組新上傳的 7 個 YAML 檔案完整定義了 **前台現場查驗 APP (Field Inspection App)** 的架構。不同於剛才分析的後台設定端，這組 APP 專注於 **「導覽、讀取、寫入」**，也就是讓現場人員拿著手機，一層一層進入到地圖，點擊點位並回報缺失。
 
@@ -357,8 +366,114 @@ Y: ((Round(ThisItem.PointY * 50 + 0.5, 0) - 0.5) / 50 * img_Map_Base.Height) - S
 
 
 
-00000
 
+00000
+以下是這組前台  GEMS_現場查驗APP1141229下午
+
+您好，我是 **M365 品管系統 (GEMS)** 的首席系統架構師。我已完成對您上傳的 Power Apps YAML 原始碼檔案的深度分析。
+
+這份報告將協助您掌握系統現況，並確保開發規範符合 **GEMS 核心專案標準**。以下是針對 `GEMS_Quality_Management_System` 的完整架構及詳細資料報告。
+
+---
+
+### 【M365 品管系統 (GEMS) 系統架構及詳細資料報告】
+
+#### 第一部分：系統架構 (System Architecture)
+
+**1. 導航流程 (Navigation Flow)**
+根據 `_EditorState.pa.yaml` 的 `ScreensOrder` 與各頁面跳轉邏輯，使用者的標準操作路徑如下：
+
+* **Step 1: Screen_Building_Select** (棟別選擇)
+* **Step 2: Screen_Floor_Select** (樓層選擇)
+* **Step 3: Screen_WorkItem_Summary** (工項階段總覽)
+* **Step 4: Screen_Map_View** (地圖作業與點位檢視)
+* **Step 5: Screen_Inspection_Form** (查驗紀錄表單編輯)
+
+**2. 全域變數 (Global Variables)**
+在 `App.OnStart` 中初始化了以下核心變數：
+
+* `gvarSelectedBuild`: 儲存目前選中的棟別名稱（如："A棟"）。
+* `gvarSelectedFloor`: 儲存目前選中的樓層名稱（如："1F"）。
+* `gvarWorkItemName`: 儲存目前選中的工程階段（如："結構"）。
+* `gvarTargetList`: 指定寫入的目標資料表為 `"L3_查驗紀錄"`。
+* `gvarSelectedPointID`: 預留給後續點位追蹤使用的 ID 變數。
+
+**3. 資料流向 (Data Flow)**
+
+* **輸入層**：由 `L1_ProjectMaster` 提供基礎建物結構，`L2_工程階段` 提供查驗分類。
+* **處理層**：在地圖頁面透過 `L1b_SpaceCoordinates` 進行篩選，將座標與 UI 綁定。
+* **儲存層**：使用者於表單填寫後，資料統一寫入 `L3_查驗紀錄` 進行持久化。
+
+---
+
+#### 第二部分：畫面詳細資料 (Detailed Screen Information)
+
+##### 1. Screen_Building_Select (棟別選擇)
+
+* **功能定位**：入口首頁，過濾專案中不同的建築物棟別。
+* **UI 結構**：包含一個 `gal_Building_Select` 圖庫控制項。
+* **資料來源**：`Distinct('L1_ProjectMaster', 棟別)`。
+* **核心邏輯**：點擊項目的 `OnSelect` 會執行 `Set(gvarSelectedBuild, ThisItem.Value)` 並跳轉至樓層選擇。
+
+##### 2. Screen_Floor_Select (樓層選擇)
+
+* **功能定位**：根據所選棟別，顯示對應的樓層清單。
+* **UI 結構**：主要組件為 `Gallery2`。
+* **資料來源**：`Distinct(Filter(L1_ProjectMaster, 棟別 = gvarSelectedBuild), 樓層)`。
+* **核心邏輯**：點擊樓層後設定 `gvarSelectedFloor` 並導航至工項總覽頁。
+
+##### 3. Screen_WorkItem_Summary (工項階段總覽)
+
+* **功能定位**：顯示目前樓層的所有工程階段，並即時統計「待改善」件數。
+* **UI 結構**：使用 `gal_WorkItem_Summary`。
+* **核心互動**：
+* **統計顯示**：透過 `lbl_DefectCount` 使用 `CountIf` 函數動態計算 `L3_查驗紀錄` 中狀態為 "待改善" 的數量。
+* **跳轉**：選中階段後（如：結構工程）將名稱存入 `gvarWorkItemName` 並進入地圖視圖。
+
+
+
+##### 4. Screen_Map_View (地圖作業)
+
+* **功能定位**：視覺化查驗點位管理中心。
+* **關鍵組件**：
+* `Image6` (地圖圖片)：使用 `LookUp` 抓取 `L0_MapLibrary` 中對應的平面圖。
+* `gal_MapPins` (點位圖庫)：疊加在圖片上方。
+
+
+* **資料來源**：篩選 `L1b_SpaceCoordinates` 中符合目前棟別與樓層的點位。
+* **座標定位**：`Circle1` 的位置由 `ThisItem.PointX` 與 `ThisItem.PointY` 決定。
+
+##### 5. Screen_Inspection_Form (查驗紀錄表單)
+
+* **功能定位**：缺失填報與照片上傳。
+* **資料來源**：`L3_查驗紀錄`。
+* **核心邏輯**：
+* **OnSuccess**：儲存後顯示「儲存成功」通知並執行 `Back()` 回到上一頁。
+* **相片處理**：支援「缺失照片」與「改善照片」雙欄位上傳。
+
+
+
+---
+
+#### 第三部分：技術合規性檢核 (Technical Validation)
+
+| 檢核項目 | 狀態 | 分析結果與建議 |
+| --- | --- | --- |
+| **Stretch 檢查** | ✅ 合規 | `Screen_Map_View` 的 `Image6.ImagePosition` 已設定為 `ImagePosition.Stretch`。 |
+| **座標公式檢查** | ⚠️ **風險提示** | `Circle1.X` 使用 `(ThisItem.PointX * (Image6.Width / 1025))`。這表示原始座標是基於 1025 寬度的絕對像素而非 **0.0~1.0 的相對比例**。 |
+| **網格技術檢查** | ⚠️ **風險提示** | 原始碼中未見 **50x50 巢狀網格 (Nested Gallery)**。目前點位是直接透過 `gal_MapPins` 呈現。 |
+| **變數傳遞檢查** | ✅ 合規 | `gvarSelectedBuild` 與 `gvarSelectedFloor` 在各畫面切換間均有正確進行 `Filter` 與 `Set`。 |
+| **防呆機制** | ✅ 合規 | 階段名稱 DataCard 已設為 `DisplayMode.View`，防止使用者誤改全域帶入的階段資訊。 |
+
+---
+
+### ⚠️ 架構師建議 (Architect's Note)
+
+1. **座標規範修正**：目前的 `PointX / 1025` 邏輯在不同螢幕比例下可能產生偏移。強烈建議將資料庫中的 `PointX` 改為 **0.0 ~ 1.0 的百分比值**，並將公式簡化為 `ThisItem.PointX * Image6.Width`。
+2. **效能最佳化**：`Screen_WorkItem_Summary` 中的 `CountIf` 是在大資料量下可能產生委派警告。建議在地圖點位變動時同步更新統計值，或使用集合 (Collection) 快取查驗結果。
+3. **網格實作**：若需支援精準的後台點位自動計算，請務必補上 50x50 的巢狀 Gallery 結構，以符合專案 L1b 座標錨點的整數反推邏輯。
+
+以上報告由 **GEMS 系統架構師** 提供。如有任何代碼細節需進一步調整，請隨時指示。
 
 
 
