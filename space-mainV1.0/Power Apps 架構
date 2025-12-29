@@ -42,6 +42,31 @@ ________________________________________
 
 
 
+114/12/29 品管新計畫-後臺地圖點位新增1141224-V1001
+1. Screen1 (首頁/歡迎頁)檔案來源：Screen1.pa.yaml功能定位：應用程式的進入點與基礎佈局框架 (Layout Template)。視覺結構：ScreenContainer1 (主容器)：採用 AutoLayout (垂直排列)，填滿整個畫面背景 (RGBA(245, 245, 245, 1) 淺灰色)。HeaderContainer1 (頂部)：高度 75，用於放置標題或導航列。MainContainer1 (內容區)：自動填滿剩餘空間，用於放置主要資訊。FooterContainer1 (底部)：高度 75，用於放置版權資訊或次要按鈕。分析結論：這是一個標準的 RWD (響應式) 框架，確保 APP 在不同尺寸螢幕上都有統一的頭尾佈局。2. scr_Admin_Nav (後台導航頁)檔案來源：scr_Admin_Nav.pa.yaml功能定位：環境設定頁。讓管理者選擇「棟別」與「樓層」，並初始化地圖環境。核心控制項 (Controls)：dd_Building (下拉選單)：Items: Distinct(L1_ProjectMaster, 棟別) (從主檔抓取不重複的棟別)。dd_Floor (下拉選單)：Items: Distinct(Filter(L1_ProjectMaster, 棟別 = dd_Building.Selected.Value), 樓層) (根據選中的棟別連動篩選樓層)。img_Map_Base_1 (預覽圖片)：顯示選定樓層的平面圖，作為視覺確認。Image: gvarCurrentMap.平面圖.Large。開始設定點位 (按鈕)：這是進入編輯器的關鍵按鈕。關鍵邏輯 (Button.OnSelect)：程式碼片段// 1. 鎖定底圖物件
+Set(gvarCurrentMap, LookUp(L0_MapLibrary, 棟別 = dd_Building.Selected.Value && 樓層 = dd_Floor.Selected.Value));
+
+// 2. 設定全域環境變數 (供後續畫面使用)
+Set(gvarBuilding, dd_Building.Selected.Value);
+Set(gvarFloor, dd_Floor.Selected.Value);
+
+// 3. 初始化選取狀態 (避免帶入舊資料)
+Set(gvarSelectedPin, Blank());
+
+// 4. 跳轉至編輯器
+Navigate(scr_Admin_Editor);
+3. scr_Admin_Editor (點位編輯主頁) - 核心畫面檔案來源：scr_Admin_Editor.pa.yaml功能定位：系統的心臟。包含地圖顯示、網格感應、點位視覺化及資料編輯表單。畫面佈局 (Split View)：con_MainBody：左右分割容器。con_MapLeft (左側 70%)：地圖操作區。con_PropertyRight (右側 30%)：屬性編輯區。A. 左側地圖區 (con_MapLeft) 詳細解構這裡使用了 三層疊加技術 (由下而上)：底層：底圖 (img_Map_Base)Image: gvarCurrentMap.平面圖.LargeImagePosition: ImagePosition.Stretch (關鍵！強制延展以確保座標系統一致)。中層：既有點位圖層 (gal_MapPins)資料來源：Filter('L1b_SpaceCoordinates', '樓層戶別'.Id = LookUp(...).ID) (只顯示當前樓層的點)。子元件 - ico_Pin (圓點圖標)：座標定位：程式碼片段X: ((Round(ThisItem.PointX * 50 + 0.5, 0) - 0.5) / 50 * img_Map_Base.Width) - (Self.Width / 2)
+Y: ((Round(ThisItem.PointY * 50 + 0.5, 0) - 0.5) / 50 * img_Map_Base.Height) - Self.Height
+(註：這裡使用了整數格線校正邏輯，確保顯示位置與網格對齊)顏色邏輯 (Fill)：紅 (Red)：有「待改善」缺失。藍 (Blue)：有「修繕完成」紀錄。綠 (Green)：已結案。灰 (Gray)：無紀錄。點擊行為 (OnSelect)：將該點資料存入 gvarSelectedPin 並切換表單為 EditMode。頂層：感應網格 (gal_Grid_Rows / gal_Grid_Cols)結構：50x50 的巢狀圖庫 (Nested Gallery)。btn_Sensor (透明按鈕)：每個格子內的感應器。點擊核心邏輯 (OnSelect)：計算座標：取得格子的 Col/Row 索引，換算成 gvarLocX/gvarLocY (0.0~1.0)。防呆比對 (LookUp)：將資料庫中的座標 乘回 50 取整數，與當前點擊的格子比對。若找到資料 $\rightarrow$ EditForm(Form_Add) (載入舊點)。若無資料 $\rightarrow$ NewForm(Form_Add) (準備新增)。B. 右側屬性區 (con_PropertyRight) 詳細解構Form_Add (編輯表單)：DataSource: L1b_SpaceCoordinates。Item: gvarSelectedPin (與地圖點擊連動)。欄位設計：PointX / PointY (隱藏)：透過 Update 屬性綁定 gvarLocX / gvarLocY 變數，自動寫入。樓層戶別 (ComboBox)：預設鎖定為 gvarBuilding + gvarFloor。空間分類 (ComboBox)：從 L1a 篩選。空間名稱 (ComboBox)：根據「空間分類」進行二級連動篩選。OnSuccess：Refresh('L1b_SpaceCoordinates') (存檔後刷新地圖)。Button5 (確認新增/儲存按鈕)：OnSelect: SubmitForm(Form_Add) $\rightarrow$ NewForm(Form_Add)。4. Screen_Add (新增資料表單頁)檔案來源：Screen_Add.pa.yaml功能定位：這看起來是一個備用或測試用的畫面，功能較為簡陋，主要邏輯已移轉至 scr_Admin_Editor 的右側面板。內容：Label5 / Label6：顯示 gvarLocX 和 gvarLocY 的值 (用於除錯)。Button6：Text: "儲存"。OnSelect: SubmitForm(Form_Add); Back();。注意：此畫面依賴 scr_Admin_Editor 中的 Form_Add，若單獨執行此頁面可能會因為找不到 Form 而報錯。在目前的架構中，建議以 scr_Admin_Editor 為主，此頁面可視為開發過程的殘留物。📝 總結目前 APP 的核心運作邏輯完全集中在 scr_Admin_Nav (初始化) 與 scr_Admin_Editor (操作) 這兩個畫面上。Nav 頁負責建立環境變數 (gvarBuilding, gvarFloor).Editor 頁利用 50x50 網格 捕捉點擊 $\rightarrow$ 透過 整數反推演算法 判斷是新增還是編輯 $\rightarrow$ 利用 右側 Form 寫入 L1b 資料表。
+
+
+
+以下是這組前台  GEMS_現場查驗APP1141229
+APP 的詳細架構分析：1. 全域與導航設定這兩個檔案定義了 APP 的啟動變數與頁面流程。
+App.pa.yaml (啟動邏輯)OnStart 初始化：Set(gvarSelectedBuild, "")：清空棟別。Set(gvarSelectedFloor, "")：清空樓層。Set(gvarWorkItemName, "")：清空工項選擇。Set(gvarTargetList, "L3_查驗紀錄")：鎖定資料寫入目標表。意義：確保每次進入 APP 都是乾淨的狀態，不會帶有上次的操作紀錄。_EditorState.pa.yaml (頁面順序)定義了標準的 「四階段線性導覽」 流程：Screen_Building_Select (選棟)Screen_Floor_Select (選樓)Screen_WorkItem_Summary (選工項/看儀表板)Screen_Map_View (看地圖/點位)Screen_Inspection_Form (填寫表單)2. 各頁面詳細功能分析這是前台 APP 的靈魂，每一頁都像漏斗一樣縮小範圍，直到鎖定特定的缺失項目。第一關：棟別選擇 (Screen_Building_Select.pa.yaml)功能：讓使用者選擇要查驗的大樓 (如 A棟)。資料來源：L1_ProjectMaster。核心邏輯：使用 Distinct 函數抓取不重複的棟別列表。點擊後 Set(gvarSelectedBuild, ...) 並跳轉下一頁。第二關：樓層選擇 (Screen_Floor_Select.pa.yaml)功能：根據已選的棟別，列出該棟的樓層 (如 3F)。資料來源：L1_ProjectMaster。核心邏輯：Items: Filter(L1_ProjectMaster, 棟別 = gvarSelectedBuild)，這是標準的階層式過濾。點擊後 Set(gvarSelectedFloor, ...) 並跳轉下一頁。第三關：工項儀表板 (Screen_WorkItem_Summary.pa.yaml)功能：這頁非常重要，它不只是選單，還是一個 「進度儀表板」。資料來源：L2_工程階段 (工項列表)。核心邏輯：統計缺失數：列表中的 lbl_DefectCount 使用 CountIf 函數，即時計算該樓層、該工項下有多少筆「待處理」紀錄。公式：CountIf('L3_查驗紀錄', '樓層戶別' = ... && 階段名稱 = ThisItem.標題 ...)導航：點擊某個工項 (如 "結構工程") 後，系統會記住 gvarWorkItemName，這將決定下一頁地圖上的圖釘顏色邏輯。第四關：地圖查驗頁 (Screen_Map_View.pa.yaml)功能：顯示底圖與 L1b 固定點位，這是現場作業的主畫面。視覺技術：底圖 (Image6)：使用 LookUp(L0_MapLibrary...) 抓圖，且屬性設為 ImagePosition.Stretch (延展)，與後台設定保持一致，確保座標準確。點位圖層 (gal_MapPins)：資料來源：L1b_SpaceCoordinates (注意：是讀取座標主檔，不是缺失表)。位置鎖定：X: ThisItem.PointX * Parent.WidthY: ThisItem.PointY * Parent.Height這證實了前台也使用了 「相對比例定位」 技術。燈號邏輯 (從程式碼推斷)：雖然這份 YAML 沒顯示完整的 Fill 顏色公式，但依據架構，這裡會去 LookUp('L3_查驗紀錄') 來決定燈號顏色 (有缺失=紅，無缺失=灰)。第五關：缺失表單頁 (Screen_Inspection_Form.pa.yaml)功能：填寫或修改查驗內容。資料來源：L3_查驗紀錄。核心控制項：Form1：連結至 L3 資料表。OnSuccess：Notify("儲存成功"); Back()，存檔後自動返回地圖頁，讓使用者繼續點下一個。DataCard：包含「階段名稱」等欄位，會自動帶入前面選擇的 gvarWorkItemName。3. 系統運作總結 (Data Flow)這組檔案展示了一個邏輯嚴密的 「漏斗式篩選」 架構：Scope (範圍)：Building (棟) $\rightarrow$ Floor (樓)。Context (情境)：WorkItem (工項，如 "油漆")。Action (執行)：Map (地圖) $\rightarrow$ Pin (點位) $\rightarrow$ Form (表單)。結論：這組檔案確認了 前台 APP 的開發已具備完整骨架。它成功實作了：跨頁變數傳遞 (gvarSelected...)。即時數據統計 (第三頁的 CountIf)。高精度地圖定位 (第四頁的 Stretch + PointX/Y)。這與我們在後台 APP 建立的座標系統是完美對接的。
+
+
+
 
 
 
