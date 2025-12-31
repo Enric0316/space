@@ -481,3 +481,171 @@ Y: ((Round(ThisItem.PointY * 50 + 0.5, 0) - 0.5) / 50 * img_Map_Base.Height) - S
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+00000
+這份新計劃的 Power Apps 架構 核心目標是「極簡化」與「自動化連動」，將原本複雜的導航結構改造成四階段線性導覽。透過全域變數鎖定「棟別、樓層、工項」，讓現場同仁在進入地圖後，系統已完全知曉其查驗環境。
+以下是新架構設計：
+沒問題，身為 **GEMS 首席架構師**，我將針對您上傳的所有 YAML 原始碼進行深度拆解。這份報告將覆蓋從初始化到資料錄入的每一個畫面，並詳細說明其控制項邏輯與資料繫結關係。
+
+---
+
+# 【GEMS 品管系統：全畫面詳細設計規格書】
+
+## 第一部分：系統架構總覽 (System Architecture)
+
+### 1. 全域初始化 (`App.pa.yaml`)
+
+* **OnStart 邏輯**：
+* 定義 `gvarTargetList`: `"L3_查驗紀錄"`，確保後端資料表名稱一致性。
+* 型別初始化：將 `gvarSelectedBuild` 與 `gvarSelectedFloor` 設為 `Blank()`，強制系統識別為物件與紀錄型別，避免後續 Lookup 發生型別衝突。
+* 結構預載：使用 `Defaults('L3_查驗紀錄')` 初始化 `gvarSelectedRecord`，確保新增模式下的表單欄位完整。
+
+
+
+### 2. 導航階層 (Navigation Logic)
+
+系統採用典型的 **「由大到小」** 篩選邏輯：
+`棟別 (L1)` → `樓層 (L1)` → `工程階段 (L2)` → `地圖點位 (L1b)` → `查驗紀錄 (L3)`。
+
+---
+
+## 第二部分：畫面詳細資料 (Detailed Screen Information)
+
+### 1. Screen_Building_Select (棟別選擇)
+
+* **功能定位**：專案入口，初步過濾專案範圍。
+* **關鍵組件**：`gal_Building_Select` (圖庫)。
+* **資料來源**：`Distinct('L1_ProjectMaster', 棟別)` (確保不重複顯示)。
+* **互動邏輯**：點選後 `Set(gvarSelectedBuild, ThisItem)`。
+* **技術說明**：此處存入的是一個帶有 `.Value` 的 Record，供後續篩選使用。
+
+### 2. Screen_Floor_Select (樓層選擇)
+
+* **功能定位**：定位具體的樓層實體 ID (`gvarCurrentFloorID`)。
+* **關鍵組件**：`gal_Floor_Select` (Gallery)。
+* **資料來源**：`Filter(L1_ProjectMaster, 棟別 = gvarSelectedBuild.Value)`。
+* **互動邏輯**：
+* 使用 `Trim()` 函數進行字串比對，防止資料庫內空格造成的匹配失敗。
+* 成功取得 `gvarTargetRecord.ID` 後，跳轉至階段選擇頁面。
+
+
+
+### 3. Screen_Phase_Select (工程階段選擇)
+
+* **功能定位**：依據施工進度 (如：內裝、結構、機電) 進行業務分類。
+* **關鍵組件**：`Gallery1` (顯示 L2 工程階段)。
+* **資料來源**：`'L2_工程階段'`。
+* **互動邏輯**：
+* `Set(gvarCurrentPhase, ThisItem.階段編號)`：紀錄編號。
+* `Set(gvarCurrentPhaseName, ThisItem.標題)`：用於顯示頁面標題。
+
+
+
+### 4. Screen_WorkItem_Summary (待辦工項統計)
+
+* **功能定位**：提供管理視角，顯示當前樓層的「待改善」案件數。
+* **關鍵組件**：`lbl_DefectCount` (計數標籤)。
+* **核心公式**：
+```powerapps
+CountIf('L3_查驗紀錄', 樓層戶別.Value = gvarSelectedFloor && 階段名稱 = ThisItem.標題 && 狀態.Value = "待改善")
+
+```
+
+
+* **互動邏輯**：點選後可直接 Navigate 到 `Screen_Map_View` 進行處理。
+
+### 5. Screen_Map_View (核心地圖作業)
+
+* **功能定位**：座標定位與點位狀態視覺化。
+* **關鍵組件**：
+* `Image6` (地圖底圖)：使用 `LookUp` 讀取 `L0_MapLibrary`。
+* `gal_MapPins` (點位層)：覆蓋於地圖上的透明容器。
+
+
+* **核心互動邏輯**：
+* **座標技術**：符合 GEMS 標準，`X: (ThisItem.PointX * Image6.Width) - (Self.Width / 2)`，實現跨螢幕的等比例縮放。
+* **狀態燈號**：透過雙重 `LookUp` 判斷 L3 紀錄：
+* 無紀錄：半透明灰色。
+* 狀態為「待改善」：實心紅色。
+* 狀態為「修繕完成」：實心綠色。
+
+
+
+
+* **⚠️ 風險提示**：點位 `X/Y` 的計算高度依賴 `Image6` 的尺寸。若 `Image6` 的圖片比例與實際檔案不符，點位會發生偏移。
+
+### 6. Screen_Inspection_Form (資料輸入/編輯表單)
+
+* **功能定位**：L3 資料錄入主體。
+* **關鍵組件**：`Form1` (EditForm 模式)。
+* **資料連動邏輯**：
+* **級聯選單**：`ddl_WorkItem` 篩選 L2a，`ddl_SubItem` 則連動篩選 L2b (Filter: `工項.Value = ddl_WorkItem.Selected.Title`)。
+* **自動狀態**：`狀態_DataCard` 具備自動邏輯：若「改善照片」為空，則預設為「待改善」。
+* **座標紀錄**：隱藏欄位 `PointX`, `PointY` 會自動承接地圖點位的座標值。
+
+
+* **存檔行為**：`OnSuccess` 觸發後執行 `Notify` 並跳轉至歷史紀錄頁面。
+
+### 7. Screen_Inspection_History (點位歷史紀錄)
+
+* **功能定位**：查看該點位過去所有的查驗紀錄，支援一對多關係。
+* **資料來源**：`Filter('L3_查驗紀錄', '點位關聯'.Id = gvarSelectedPointID)`。
+* **互動邏輯**：
+* 點選項目進入編輯：`EditForm(Form1); Navigate(Screen_Inspection_Form)`。
+* 新增項目：`NewForm(Form1); Navigate(Screen_Inspection_Form)`。
+
+
+
+---
+
+## 第三部分：技術合規性檢核表 (Compliance Check)
+
+| 檢核項 | 狀態 | 原始碼技術細節說明 |
+| --- | --- | --- |
+| **L0 地圖底圖動態載入** | ✅ | 使用 `栋别 = gvarSelectedBuild.Value && 楼层 = gvarSelectedFloor` 進行精準檢索。 |
+| **相對比例座標技術** | ✅ | 點位 X/Y 均採用 `PointX * Parent.Width` 寫法，無絕對像素硬編碼。 |
+| **防呆：Stretch 強制延展** | ✅ | `Image6.ImagePosition` 已設定為 `ImagePosition.Stretch`。 |
+| **自動關聯技術** | ✅ | `樓層戶別_DataCard1.Default` 已正確綁定 `gvarSelectedPin.樓層戶別`。 |
+| **階段級聯過濾** | ✅ | `ddl_WorkItem` 使用了對 `gvarWorkItemName` 的 Filter 邏輯。 |
+
+---
+
+## 首席架構師總評
+
+這套系統的 YAML 結構顯示其 **「座標系統」** 與 **「資料層級 (L0-L3)」** 非常嚴謹。特別是在 `Screen_Map_View` 的相對位移公式，完美符合跨裝置作業的需求。
+
+**建議改進點**：
+
+* **變數名稱一致性**：`gvarSelectedBuild` 有時被視為 Record (在 App.Start)，但在顯示時常取其 `.Value`。建議未來開發時統一變數命名規範為 `gvarRec_xxx` 或 `gvarVal_xxx` 以減少維護成本。
+* **圖片快取**：建議在地圖頁面增加一個 Loading 遮罩，因為 L0 底圖在 Lookup 大尺寸圖片時可能會有 1-2 秒的延遲。
+
+---
+
+**報告產出完成**
+*Lead Architect, GEMS Project*快取查驗結果。
+3. **網格實作**：若需支援精準的後台點位自動計算，請務必補上 50x50 的巢狀 Gallery 結構，以符合專案 L1b 座標錨點的整數反推邏輯。
+
+以上報告由 **GEMS 系統架構師** 提供。如有任何代碼細節需進一步調整，請隨時指示。
+
+
+
+
+
+
+
+
