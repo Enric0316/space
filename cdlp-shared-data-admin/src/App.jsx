@@ -8,6 +8,7 @@ const NAV = [
 
 const EMPTY = { organizations:[], projects:[], locations:[], standard:[], projectitems:[], people:[], vendors:[] }
 const SNAPSHOT = { organizations:1, projects:1, standard:152, projectitems:152 }
+const AUTH_REDIRECT_URL = 'https://enric0316.github.io/space/'
 
 function Table({ cols, rows }) {
   if (!rows?.length) return <div className="empty">目前沒有可顯示資料。</div>
@@ -73,9 +74,16 @@ export default function App(){
     setBusy(true)
     try{
       if(authMode==='signup'){
-        const {data:r,error}=await supabase.auth.signUp({email,password,options:{data:{display_name:displayName||email.split('@')[0]}}})
+        const {data:r,error}=await supabase.auth.signUp({
+          email,
+          password,
+          options:{
+            data:{display_name:displayName||email.split('@')[0]},
+            emailRedirectTo:AUTH_REDIRECT_URL
+          }
+        })
         if(error) throw error
-        setNotice(r.session?'註冊成功；帳號仍需 Organization / Project 授權。':'註冊已送出；若啟用 Email Confirm，請先完成驗證，再回來登入。')
+        setNotice(r.session?'註冊成功；帳號仍需 Organization / Project 授權。':'註冊已送出；請從驗證信回到正式 CDLP 網站完成驗證。')
       }else{
         const {error}=await supabase.auth.signInWithPassword({email,password}); if(error) throw error
       }
