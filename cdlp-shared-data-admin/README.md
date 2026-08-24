@@ -6,6 +6,8 @@ React + Vite + Supabase Shared Core 管理介面。
 此版本由 `Enric0316/space` repository 的 `cdlp-shared-data-admin/` 子目錄部署。
 正式 Pages URL：`https://enric0316.github.io/space/`
 
+Pages Source 已設定為 GitHub Actions（2026-08-24），此 commit 用於重新觸發正式部署驗證。
+
 ## 目前功能
 - Supabase Email/Password 註冊、登入、登出
 - 未登入：顯示 Shared Core 基線數字
